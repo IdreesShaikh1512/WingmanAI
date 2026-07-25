@@ -1,0 +1,18 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}"],
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "editor.formatOnSave": true,
+  "[python]": { "editor.defaultFormatter": "ms-python.black-formatter" },
+  "[typescript][typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "eslint.workingDirectories": ["frontend"],
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "backend/.venv": true,
+    "frontend/node_modules": true,
+    "frontend/.next": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Docker: start Postgres + Redis",
+      "type": "shell",
+      "command": "docker compose up -d",
+      "options": { "cwd": "${workspaceFolder}" }
+    },
+    {
+      "label": "Backend: install deps (uv)",
+      "type": "shell",
+      "command": "uv sync",
+      "options": { "cwd": "${workspaceFolder}/backend" }
+    },
+    {
+      "label": "Backend: run migrations",
+      "type": "shell",
+      "command": "uv run alembic upgrade head",
+      "options": { "cwd": "${workspaceFolder}/backend" }
+    },
+    {
+      "label": "Backend: run tests",
+      "type": "shell",
+      "command": "uv run pytest -v",
+      "options": { "cwd": "${workspaceFolder}/backend" }
+    },
+    {
+      "label": "Frontend: install deps",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/frontend" }
+    }
+  ]
+}

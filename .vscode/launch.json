@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["backend.main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Backend: Pytest (current file)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Frontend: Next.js dev server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/frontend"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Wingman (backend + frontend)",
+      "configurations": ["Backend: FastAPI (uvicorn)", "Frontend: Next.js dev server"]
+    }
+  ]
+}
