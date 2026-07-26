@@ -305,26 +305,9 @@ class IntentRouter:
             lowered.strip(),
         )
 
-        # Travel: destination
+        # Travel: destination extraction
         if domain == "travel":
-            m = re.search(
-                r"\b(?:to|in|around|visit|explore|for|going to)\s+([A-Za-z\s]{2,25}?)(?:\s+(?:trip|for|with|,|$))",
-                original,
-                re.IGNORECASE,
-            )
-            if m:
-                dest = m.group(1).strip()
-                if dest.lower() not in ("the", "a", "an", "my"):
-                    entities["destination"] = dest
-            if not entities.get("destination"):
-                words = [
-                    w for w in original.split()
-                    if w.lower() not in
-                    ("i", "wanna", "want", "go", "to", "trip", "travel",
-                     "the", "a", "my", "plan", "me", "please", "help")
-                ]
-                if words:
-                    entities["destination"] = " ".join(words[:2])
+            entities["destination"] = IntentRouter._extract_destination(original)
 
         # Budget
         budget_m = re.search(r"\$[\d,]+|\b(\d+)\s*(?:dollars?|usd|bucks?|k\b)", lowered)
@@ -398,6 +381,42 @@ class IntentRouter:
         entities["goal"] = clean[:100]
 
         return {k: v for k, v in entities.items() if v}
+
+    @staticmethod
+    def _extract_destination(original: str) -> str:
+        """Extract a clean destination name from user input, removing noise and durations."""
+        text = original.strip()
+
+        # Remove common duration patterns first (e.g. "10-day", "7 days", "2 weeks")
+        clean_text = re.sub(r"\b\d+[- ]?(?:day|week|night|month)s?\b", "", text, flags=re.IGNORECASE)
+
+        # Look for target preposition markers: "to <Destination>", "in <Destination>", "visit <Destination>"
+        m = re.search(
+            r"\b(?:to|in|around|visit|explore|flying to|go to|going to)\s+([A-Za-z\s]{2,30}?)(?:\s+(?:for|with|on|budget|under|with|,|$))",
+            clean_text,
+            re.IGNORECASE,
+        )
+        if m:
+            dest = m.group(1).strip()
+            # Filter out non-place words
+            stop_words = {"the", "a", "an", "my", "our", "trip", "vacation", "itinerary", "plan", "south", "north"}
+            dest_words = [w for w in dest.split() if w.lower() not in ("the", "a", "an", "my", "our", "trip", "vacation")]
+            if dest_words:
+                result = " ".join(dest_words).title()
+                if len(result) >= 3:
+                    return result
+
+        # Fallback: remove all travel verb/noun stop words and return remaining words
+        stop_verbs = {
+            "plan", "a", "an", "my", "our", "trip", "vacation", "itinerary", "for", "to", "in",
+            "around", "go", "going", "visit", "explore", "travel", "flying", "fly", "help", "me",
+            "please", "days", "day", "weeks", "week", "budget", "solo", "couple", "group", "family"
+        }
+        words = [w for w in clean_text.split() if w.lower() not in stop_verbs and not w.isdigit()]
+        if words:
+            return " ".join(words[:3]).title()
+
+        return "your destination"
 
     @staticmethod
     def _detect_missing_fields(domain: str, entities: dict) -> list[str]:
