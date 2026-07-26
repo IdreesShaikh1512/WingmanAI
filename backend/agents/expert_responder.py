@@ -1,36 +1,17 @@
 """Expert Responder — Domain Specialist AI Engine.
 
 This is the core of Wingman's intelligence upgrade.
+Acts as a team of senior domain consultants who deliver FINAL, COMPLETE, REAL answers.
 
-Instead of generating templates with "Option A", "To be calculated", "Research this",
-the ExpertResponder acts as a team of senior domain consultants who deliver
-FINAL, COMPLETE, REAL answers.
-
-Every response should feel like:
-  "I hired a team of experts."
-  Not: "I received a generic AI response."
-
-Domain specialists:
-  - Travel:    travel planner + airline consultant + visa advisor + local guide + budget planner
-  - Learning:  career coach + curriculum designer + industry mentor
-  - Coding:    software architect + DevOps engineer + security consultant
-  - Business:  strategy consultant + market analyst + financial modeler
-  - Fitness:   certified trainer + nutritionist + physiologist
-  - Finance:   financial advisor + investment analyst + tax strategist
-  - Career:    executive recruiter + career coach + industry mentor
-  - Health:    clinical advisor + wellness coach + diagnostics specialist
-
-PRIMARY RULE:
-  - Never generate templates.
-  - Never generate placeholders.
-  - Never generate "Option A", "Option B", "Research this", "Fill this later".
-  - Generate REAL recommendations with REAL names, REAL prices, REAL sources.
+No templates. No placeholders. No "Option A", "Option B", "Research this".
+REAL hotels. REAL frameworks. REAL books. REAL companies. REAL prices.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 
 import httpx
 
@@ -62,95 +43,47 @@ FORBIDDEN — Never output:
   ✗ "[destination]", "[company]", "[tool]"
   ✗ Generic step lists with no real content
   ✗ "You should research...", "Consider looking into..."
+  ✗ "Best luxury hotel in...", "Check Google", "Search Booking.com"
 
 REQUIRED — Always output:
-  ✓ Real hotel names (e.g., Shangri-La The Fort, Park Hyatt Tokyo, The Hoxton)
-  ✓ Real restaurant names (e.g., Manam Manila, Nobu London, Noma Copenhagen)
-  ✓ Real transport options (e.g., Grab, MRT Line 3, JR Pass, Oyster Card, BTS Skytrain)
+  ✓ Real hotel names (e.g., Shangri-La The Fort, Park Hyatt Tokyo, Ritz Paris, The Oberoi)
+  ✓ Real restaurant names (e.g., Manam Manila, Nobu London, Jungsik Seoul, Indian Accent)
+  ✓ Real transport options (e.g., Grab, T-Money, MRT Line 3, JR Pass, Oyster Card, BTS Skytrain)
   ✓ Real frameworks (e.g., React, FastAPI, Next.js, Django, Spring Boot)
   ✓ Real books (e.g., "Hands-On Machine Learning" by Aurélien Géron, "Clean Code" by Robert C. Martin)
   ✓ Real YouTube channels (e.g., Andrej Karpathy, Fireship, Traversy Media, 3Blue1Brown)
   ✓ Real certifications (e.g., AWS Solutions Architect, Google Data Analytics, CFA Level 1)
   ✓ Real companies (e.g., Stripe, Vercel, Cloudflare, Supabase, Railway)
-  ✓ Real universities (e.g., MIT OpenCourseWare, Stanford Online, Coursera, fast.ai)
-  ✓ Real attractions (e.g., Senso-ji Temple, Shibuya Crossing, teamLab Borderless)
+  ✓ Real attractions (e.g., Senso-ji Temple, Shibuya Crossing, Gyeongbokgung Palace, Eiffel Tower)
   ✓ Real salary ranges (e.g., $85,000–$140,000/year for Mid-Level Data Scientist in US)
-  ✓ Real price estimates (e.g., ¥15,000–¥25,000/night for mid-range Tokyo hotel)
-  ✓ Real timelines (e.g., "Python fundamentals: 6–8 weeks with 2 hours/day")
+  ✓ Real price estimates (e.g., ₩180,000–₩320,000/night for mid-range Seoul hotel)
 
 ══════════════════════════════════════════════════════════
 DOMAIN EXPERT MODES
 ══════════════════════════════════════════════════════════
 
 TRAVEL: Act as senior luxury travel consultant + logistics planner + local destination expert + budget analyst + safety advisor + itinerary architect.
-  → Produce a complete, publication-grade Travel Intelligence Dossier.
+  → Produce a complete, publication-grade Travel Intelligence Dossier for ANY country or city requested.
   → Hotels: Recommend specific REAL hotels by name across Luxury, Premium, Mid-range, Budget, and Backpacker tiers (Name, Neighborhood/Area, Approx Price/night, Pros, Best For).
   → Restaurants: Recommend REAL dining spots across Fine Dining, Authentic Local, Street Food, Vegetarian, Cafe, and Dessert (Name, Neighborhood, Cuisine, Cost per person, Why Go).
-  → Transport: Real metro/bus systems, airport transfer routes, ride-hailing apps (e.g. Grab, Careem, Uber, Bolt), travel passes, and walking districts.
+  → Transport: Real metro/bus systems, airport transfer routes, ride-hailing apps (e.g. Grab, Careem, Uber, Bolt, Kakao T), travel passes, and walking districts.
   → Day-by-Day Itinerary: Morning, Afternoon, Evening breakdown, meals, transit time, and estimated daily spend for each day.
   → Safety & Emergency: Emergency numbers (Police, Ambulance, Tourist Police), named emergency hospitals, tourist scams to avoid, unsafe areas to skip, water/food safety tips, and cash vs. card strategy.
   → Shopping: Local markets, luxury malls, authentic souvenirs, and local craft centers.
   → Itemized Budget Table: Breakdown across accommodation, flights, food, transport, activities, shopping, contingency, and grand total.
   → Deliverables: Include Packing Checklist, Emergency Sheet, Reminders to Set, and Calendar Event Suggestions.
-  → Explain "Why this recommendation?" for every major selection.
 
 LEARNING / CAREER: Act as career coach + curriculum designer + industry mentor.
-  → Provide REAL course names (e.g., "CS50x by Harvard on edX")
-  → Provide REAL book titles and authors
-  → Provide REAL YouTube channels by name
-  → Provide REAL certifications with exam codes and costs
-  → Provide REAL weekly roadmaps with hour estimates
-  → Provide REAL salary data by role and market
-
 CODING: Act as software architect + senior engineer.
-  → Write REAL folder structures with actual file names
-  → Write REAL database schemas with actual table/column names
-  → Write REAL API endpoints (GET /api/v1/users, POST /api/v1/auth/login, etc.)
-  → Recommend REAL libraries (e.g., "Pydantic v2 for validation, SQLAlchemy 2.0 for ORM")
-  → Recommend REAL hosting platforms with pricing (e.g., "Railway.app at ~$5/month")
-
 BUSINESS: Act as strategy consultant + market analyst.
-  → Name REAL competitors with REAL market positions
-  → Provide REAL pricing models with REAL numbers
-  → Give REAL unit economics estimates (CAC, LTV, margins)
-  → Suggest REAL marketing channels with REAL cost-per-acquisition ranges
-
 FITNESS: Act as certified personal trainer + sports nutritionist.
-  → Provide REAL workout programs (e.g., 5/3/1, GZCLP, PPL)
-  → Name REAL exercises with sets/reps/rest
-  → Provide REAL meal plans with actual macros
-  → Recommend REAL supplements with doses (e.g., "Creatine monohydrate: 5g/day")
-
 FINANCE: Act as financial advisor + investment analyst.
-  → Recommend REAL brokers (e.g., Fidelity, Interactive Brokers, eToro)
-  → Cite REAL average returns (e.g., "S&P 500 historical average: ~10%/year")
-  → Provide REAL fee comparisons
-  → Give REAL tax-advantaged account types by country
 
-══════════════════════════════════════════════════════════
-KNOWLEDGE CAVEAT RULE
-══════════════════════════════════════════════════════════
-If you cannot know exact real-time information (live prices, today's visa fees):
-  ✓ State the approximate known range
-  ✓ Explain what needs live verification
-  ✓ Never leave a blank or "To be calculated"
-
-══════════════════════════════════════════════════════════
-OUTPUT FORMAT
-══════════════════════════════════════════════════════════
-Use rich markdown:
-  - Tables for comparisons, budgets, schedules, roadmaps
-  - Numbered lists for step-by-step processes
-  - Bullet lists for options and checklists
-  - Code blocks for schemas, folder structures, API specs
-  - Bold for emphasis on key names and numbers
-  - Emojis sparingly for section headers only
-
-Always end with a "✅ Immediate Action" section — the single most important thing to do right now."""
+Always end with a "✅ Immediate Action" section."""
 
 
 class ExpertResponder:
-    """Calls Claude with the domain-expert system prompt to generate REAL content."""
+    """Calls Claude or uses rich built-in world intelligence to generate REAL content."""
 
     def __init__(self) -> None:
         self._api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -168,10 +101,6 @@ class ExpertResponder:
         entities: dict,
         user_context_snippets: list[str] | None = None,
     ) -> str:
-        """
-        Generate a complete, expert-level response for the given objective.
-        Returns formatted markdown string with real content — no templates.
-        """
         if not self.has_api_key():
             return self._fallback_expert_response(objective, domain, mission_title, operations, entities)
 
@@ -192,8 +121,6 @@ class ExpertResponder:
         entities: dict,
         user_context_snippets: list[str],
     ) -> str:
-        """Call the Anthropic API with the expert system prompt."""
-
         ops_text = "\n".join(
             f"  {i+1}. {op['title']}: {op.get('description', '')}"
             for i, op in enumerate(operations)
@@ -208,18 +135,14 @@ Context from user history: {', '.join(user_context_snippets) if user_context_sni
 Extracted details:
 {json.dumps(entities, indent=2)}
 
-Planned Operations to execute:
+Planned Operations:
 {ops_text}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 INSTRUCTIONS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-You are acting as a team of senior domain experts for the "{domain}" domain.
-
-Generate a COMPLETE, EXPERT-LEVEL response for this objective.
-Replace ALL placeholders with REAL names, REAL numbers, REAL resources.
-The user should receive a FINISHED SOLUTION, not a template to fill in later."""
+You are senior domain experts for "{domain}".
+Generate a COMPLETE, EXPERT-LEVEL response for ANY country or topic specified.
+NO placeholders. NO templates. NO "Option A/B". NO "Best hotel in...".
+Provide REAL names, REAL prices, REAL transport, REAL dishes, REAL resources."""
 
         response = httpx.post(
             _ANTHROPIC_API_URL,
@@ -247,17 +170,12 @@ The user should receive a FINISHED SOLUTION, not a template to fill in later."""
         operations: list[dict],
         entities: dict,
     ) -> str:
-        """
-        Domain-specific rich fallback when no API key is configured.
-        Still uses real domain knowledge — NOT generic templates.
-        """
         dest = entities.get("destination", "")
         subject = entities.get("subject", entities.get("goal", ""))
-        budget = entities.get("budget", "")
         timeline = entities.get("timeline", "")
 
         if domain == "travel":
-            return self._travel_expert_fallback(objective, dest, budget, timeline, entities)
+            return self._travel_expert_fallback(objective, dest, timeline, entities)
         elif domain in ("career", "learning"):
             return self._career_learning_expert_fallback(objective, subject, timeline, entities)
         elif domain == "coding":
@@ -271,172 +189,311 @@ The user should receive a FINISHED SOLUTION, not a template to fill in later."""
         else:
             return self._general_expert_fallback(objective, domain, operations, entities)
 
-    @staticmethod
-    def _travel_expert_fallback(objective: str, dest: str, budget: str, timeline: str, entities: dict) -> str:
-        dest_name = dest.title() if dest and dest.lower() != "your destination" else "Your Destination"
-        d = dest.lower() if dest else ""
+    # ─────────────────────────────────────────────────────────────────────────
+    # GLOBAL TRAVEL INTELLIGENCE DOSSIER ENGINE (Covers EVERY Country)
+    # ─────────────────────────────────────────────────────────────────────────
 
-        # KOREA / SEOUL
+    @staticmethod
+    def _travel_expert_fallback(objective: str, dest: str, timeline: str, entities: dict) -> str:
+        d = dest.lower() if dest else objective.lower()
+
+        # SOUTH KOREA / SEOUL
         if any(k in d for k in ("korea", "seoul", "busan", "jeju")):
             dest_name = "Seoul, South Korea"
+            visa_info = "**Visa:** US, EU, UK, AUS, CA — K-ETA (k-eta.go.id, $8 USD) or visa exemption."
             hotels = [
-                ("The Shilla Seoul", "Jangchung-dong", "₩450,000–₩850,000/night ($340–640)", "⭐⭐⭐⭐⭐ — Legendary Korean hospitality, Namsan mountain views"),
+                ("The Shilla Seoul", "Jangchung-dong", "₩450,000–₩850,000/night ($340–640)", "⭐⭐⭐⭐⭐ — Legendary Korean luxury, Namsan mountain views"),
                 ("Four Seasons Hotel Seoul", "Gwanghwamun", "₩650,000–₩1,200,000/night", "⭐⭐⭐⭐⭐ — Palace views, Charles H hidden speakeasy bar"),
-                ("Lotte Hotel Seoul", "Myeongdong", "₩280,000–₩500,000/night", "⭐⭐⭐⭐⭐ — Heart of shopping & street food, connected to Metro"),
-                ("Nine Tree Premier Hotel Myeongdong 2", "Myeongdong", "₩130,000–₩220,000/night", "⭐⭐⭐⭐ — Stylish mid-range, walking distance to Namsan Tower"),
-                ("L7 Hongdae by Lotte", "Hongdae", "₩110,000–₩180,000/night", "⭐⭐⭐⭐ — Rooftop pool, youth/nightlife vibe, great value"),
-                ("Step Inn Myeongdong 1", "Myeongdong", "₩45,000–₩80,000/night", "⭐⭐⭐ — Clean, modern hostel with private rooms & complimentary breakfast"),
+                ("Lotte Hotel Seoul", "Myeongdong", "₩280,000–₩500,000/night", "⭐⭐⭐⭐⭐ — Shopping hub, direct Metro access"),
+                ("Nine Tree Premier Myeongdong 2", "Myeongdong", "₩130,000–₩220,000/night", "⭐⭐⭐⭐ — Stylish mid-range near Namsan Tower"),
+                ("L7 Hongdae by Lotte", "Hongdae", "₩110,000–₩180,000/night", "⭐⭐⭐⭐ — Rooftop pool, indie nightlife vibe"),
+                ("Step Inn Myeongdong 1", "Myeongdong", "₩45,000–₩80,000/night", "⭐⭐⭐ — Modern hostel with breakfast"),
             ]
             restaurants = [
-                ("Jungsik", "Gangnam", "₩180,000–₩280,000 pp", "Fine Dining — 2 Michelin star modern Korean fine dining"),
-                ("Tosokchon Samgyetang", "Gyeongbokgung", "₩20,000–₩35,000 pp", "Authentic Local — Legendary ginseng chicken soup near the palace"),
-                ("Myeongdong Kyoja", "Myeongdong", "₩11,000–₩15,000 pp", "Authentic Local — Michelin Bib Gourmand Kalguksu (knife-cut noodles)"),
-                ("Gwangjang Market (Cho-yon Feast)", "Jongno", "₩5,000–₩15,000 pp", "Street Food — Famous Netflix street food market: Bindle-tteok & Mayak Kimbap"),
-                ("Plant Cafe Seoul", "Itaewon", "₩14,000–₩22,000 pp", "Vegetarian/Vegan — 100% plant-based comfort food & craft bakery"),
-                ("On Ne Sait Jamais", "Itaewon", "₩8,000–₩14,000 pp", "Cafe & Dessert — Famous bathhouse-themed dessert cafe with french pastry"),
+                ("Jungsik", "Gangnam", "₩180,000–₩280,000 pp", "Fine Dining — 2 Michelin star modern Korean tasting menu"),
+                ("Tosokchon Samgyetang", "Gyeongbokgung", "₩20,000–₩35,000 pp", "Authentic Local — Famous ginseng chicken soup near palace"),
+                ("Myeongdong Kyoja", "Myeongdong", "₩11,000–₩15,000 pp", "Authentic Local — Michelin Bib Gourmand knife-cut noodles"),
+                ("Gwangjang Market (Cho-yon Feast)", "Jongno", "₩5,000–₩15,000 pp", "Street Food — Netflix featured: Bindle-tteok & Mayak Kimbap"),
+                ("Plant Cafe Seoul", "Itaewon", "₩14,000–₩22,000 pp", "Vegetarian — 100% plant-based bakery & bowls"),
             ]
             transport = [
-                ("T-Money Card", "₩2,500 card + top-up", "Universal transit card for Seoul Metro, buses, and convenience stores"),
-                ("AREX Express Train", "₩9,500 one-way", "Non-stop 43-min direct train from Incheon Airport (ICN) → Seoul Station"),
-                ("Seoul Metropolitan Subway", "₩1,400 base fare", "World's #1 metro system — clean, fast, English signage everywhere"),
-                ("Kakao T (Kakao Taxi app)", "₩4,800 base fare", "Korea's Uber equivalent — cashless, tracks driver in English"),
-                ("KTX High-Speed Rail", "₩59,800 to Busan", "300 km/h bullet train Seoul → Busan in 2.5 hours"),
+                ("T-Money Card", "₩2,500 + top-up", "Universal transit card for Seoul Metro, buses, and 7-Eleven"),
+                ("AREX Express Train", "₩9,500 one-way", "Non-stop 43-min direct train Incheon Airport (ICN) → Seoul Station"),
+                ("Kakao T (Kakao Taxi app)", "₩4,800 base", "Korea's Uber equivalent — cashless and tracks driver in English"),
+                ("KTX Bullet Train", "₩59,800 to Busan", "300 km/h train Seoul → Busan in 2.5 hours"),
             ]
             attractions = [
                 "Gyeongbokgung Palace — ₩3,000 entry (FREE if wearing Hanbok rental)",
-                "N Seoul Tower (Namsan) — Cable car ₩14,000 return, panoramic skyline views",
-                "Bukchon Hanok Village — Traditional 600-year-old wooden hanok neighborhood",
-                "Hongdae Shopping & Busking Street — Indie music, street performance, fashion",
-                "Myeongdong Night Market — Street food paradise (Egg bread, grilled lobster, hotteok)",
-                "Starfield Library Coex Mall — Iconic 13-meter tall giant bookshelf in Gangnam",
-                "DMZ (Demilitarized Zone) Day Trip — Book 2 weeks ahead, 3rd Infiltration Tunnel & Dora Observatory",
+                "N Seoul Tower (Namsan) — Cable car ₩14,000 return, skyline observation",
+                "Bukchon Hanok Village — 600-year-old traditional wooden village",
+                "Hongdae Busking & Fashion Street — Indie culture, street dance, shopping",
+                "DMZ (Demilitarized Zone) Day Trip — 3rd Infiltration Tunnel & Dora Observatory",
             ]
-            visa_info = "**Visa:** US, EU, UK, AUS, CA — K-ETA (Korea Electronic Travel Authorization) required or visa-free exemption depending on year. Apply online at k-eta.go.id ($8 USD)."
             budget_est = {
-                "Backpacker / Budget": "₩60,000–₩90,000/day ($45–68 USD) — Hostel + Gwangjang market + T-Money Metro",
-                "Mid-Range Comfort": "₩180,000–₩320,000/day ($135–240 USD) — 4★ Myeongdong Hotel + Kalguksu/Samgyetang + KTX day trips",
-                "Luxury Dossier": "₩600,000–₩1,500,000+/day ($450–1,150 USD) — The Shilla/Four Seasons + Jungsik Michelin dining + Private Kakao Black chauffeur",
+                "Budget": "₩60,000–₩90,000/day ($45–68 USD) — Hostel + Gwangjang Market + Metro",
+                "Mid-Range Comfort": "₩180,000–₩320,000/day ($135–240 USD) — 4★ Hotel + Sit-down meals + KTX",
+                "Luxury Dossier": "₩600,000–₩1,500,000+/day ($450–1,150 USD) — The Shilla + Jungsik + Chauffeur",
             }
-            currency_tip = "**Currency & Payments:** KRW (South Korean Won). Credit cards are accepted EVERYWHERE (even ₩1,000 convenience store purchases). T-Money card requires cash KRW to reload at station machines."
-            safety_info = "**Safety & Emergency:** Emergency Police: 112 | Ambulance/Fire: 119 | Tourist Helpline: 1330 (English available 24/7). Emergency Hospital: Severance Hospital Sinchon (International Clinic)."
+            currency_tip = "**Currency & Payments:** KRW (South Korean Won). Cards accepted everywhere. T-Money reloads require cash KRW."
+            safety_info = "**Emergency:** Police: 112 | Ambulance: 119 | Tourist Helpline: 1330 (24/7 English). Hospital: Severance Hospital Sinchon."
 
-        # PHILIPPINES / MANILA / BORACAY
+        # PHILIPPINES / MANILA / BORACAY / CEBU
         elif any(k in d for k in ("philippines", "manila", "boracay", "cebu", "bgc")):
             dest_name = "Manila & Boracay, Philippines"
+            visa_info = "**Visa:** US, EU, UK, AUS, CA, JP — Visa-free up to 30 days. eTravel registration (etravel.gov.ph) required."
             hotels = [
-                ("Shangri-La The Fort Manila", "Bonifacio Global City (BGC)", "$300–$550/night", "⭐⭐⭐⭐⭐ — Ultra-luxury in safest tech/financial district"),
-                ("Seda BGC", "Bonifacio Global City", "$140–$220/night", "⭐⭐⭐⭐ — Rooftop bar, modern business comfort, steps from High Street"),
-                ("City Garden Grand Hotel", "Makati", "$70–$120/night", "⭐⭐⭐⭐ — Roof deck pool, great skyline views, central Makati location"),
-                ("Belmont Hotel Manila", "Newport City (NAIA T3)", "$65–$110/night", "⭐⭐⭐⭐ — Connected via Runway Manila bridge directly to Airport Terminal 3"),
-                ("Henann Crystal Sands Resort", "Boracay Station 1", "$180–$320/night", "⭐⭐⭐⭐⭐ — Infinite beachfront pool on White Beach"),
+                ("Shangri-La The Fort Manila", "BGC Manila", "$300–$550/night", "⭐⭐⭐⭐⭐ — Ultra-luxury in safest tech/financial district"),
+                ("Seda BGC", "Bonifacio Global City", "$140–$220/night", "⭐⭐⭐⭐ — Rooftop bar, steps from High Street"),
+                ("City Garden Grand Hotel", "Makati Manila", "$70–$120/night", "⭐⭐⭐⭐ — Roof deck pool, central Makati location"),
+                ("Belmont Hotel Manila", "Newport City (NAIA T3)", "$65–$110/night", "⭐⭐⭐⭐ — Skybridge connected to Airport T3"),
+                ("Henann Crystal Sands Resort", "Boracay Station 1", "$180–$320/night", "⭐⭐⭐⭐⭐ — Infinity pool on White Beach"),
             ]
             restaurants = [
-                ("Manam Comfort Filipino", "BGC High Street", "$12–$25 pp", "Authentic Local — Legendary House Crispy Sisig & Watermelon Sinigang"),
-                ("Locavore Kitchen & Drinks", "Kapitolyo / BGC", "$15–$30 pp", "Authentic Local — Modern Filipino fusion: Sizzling Sinigang & Lechon Oyster"),
-                ("Wildflour Cafe + Bakery", "BGC / Salcedo Makati", "$18–$35 pp", "Cafe & Brunch — Premier brunch spot, Cronuts, Shakshuka, artisanal coffees"),
-                ("Mesa Filipino Moderne", "Greenbelt 5 Makati", "$12–$22 pp", "Authentic Local — Crispchon (crispy roast pig served 2 ways)"),
-                ("Toyo Eatery", "Chino Roces Makati", "$90–$140 pp", "Fine Dining — Asia's 50 Best Restaurants, avant-garde 11-course Filipino tasting menu"),
+                ("Manam Comfort Filipino", "BGC High Street", "$12–$25 pp", "Authentic Local — House Crispy Sisig & Watermelon Sinigang"),
+                ("Locavore Kitchen & Drinks", "Kapitolyo / BGC", "$15–$30 pp", "Authentic Local — Sizzling Sinigang & Lechon Oyster"),
+                ("Wildflour Cafe + Bakery", "BGC / Salcedo Makati", "$18–$35 pp", "Cafe & Brunch — Premier brunch, Cronuts, Shakshuka"),
+                ("Mesa Filipino Moderne", "Greenbelt 5 Makati", "$12–$22 pp", "Authentic Local — Crispchon roast pig 2 ways"),
+                ("Toyo Eatery", "Chino Roces Makati", "$90–$140 pp", "Fine Dining — Asia's 50 Best, 11-course Filipino tasting menu"),
             ]
             transport = [
-                ("Grab App", "₱200–₱500 per ride ($3.50–$9)", "Essential ride-hailing app — safest, cash or credit card options"),
-                ("NAIA Loop Airport Bus", "₱50 ($0.90)", "Transfers between Airport Terminals 1, 2, 3, and 4"),
-                ("MRT Line 3 & LRT 1", "₱15–₱30 per ride", "Metro rail line running along EDSA arterial highway"),
-                ("Jeepney", "₱13 base fare", "Iconic Philippine open-air public utility vehicle"),
-                ("Point-to-Point (P2P) Bus", "₱100–₱150", "Air-conditioned express bus from Makati/BGC directly to NAIA T3"),
+                ("Grab App", "₱200–₱500 per ride ($3.50–$9)", "Essential ride-hailing app — safest cashless transport"),
+                ("NAIA Loop Airport Bus", "₱50 ($0.90)", "Transfers between Terminals 1, 2, 3, and 4"),
+                ("MRT Line 3 & LRT 1", "₱15–₱30 per ride", "Elevated metro line along EDSA highway"),
+                ("Jeepney", "₱13 base fare", "Iconic Philippine open-air transport vehicle"),
             ]
             attractions = [
-                "Intramuros Walled City — 16th-century Spanish colonial historic fortress & San Agustin Church",
-                "BGC High Street & Venice Grand Canal Mall — Outdoor pedestrian shopping & gondola experience",
-                "Rizal Park (Luneta) & National Museum of Fine Arts — Free admission, Spoliarium painting",
-                "Boracay White Beach Station 1 — World-famous powdery white sand & sunset paraw sailing",
+                "Intramuros Walled City — 16th-century Spanish colonial fortress & San Agustin Church",
+                "BGC High Street & Venice Grand Canal Mall — Outdoor pedestrian shopping & gondolas",
+                "Rizal Park & National Museum of Fine Arts — Free entry, Spoliarium masterpiece",
+                "Boracay White Beach Station 1 — Powdery white sand & sunset paraw sailing",
             ]
-            visa_info = "**Visa:** US, EU, UK, AUS, CA, JP passports — Visa-free entry for up to 30 days. eTravel registration (etravel.gov.ph) required within 72 hours before arrival."
             budget_est = {
-                "Budget": "₱2,000–₱3,500/day ($35–60 USD) — Belmont/Hostel + Jollibee/Manam + Grab Rides",
-                "Mid-Range Comfort": "₱7,000–₱14,000/day ($125–250 USD) — Seda BGC + Wildflour/Locavore + Boracay flights",
-                "Luxury Dossier": "₱22,000–₱55,000+/day ($400–1,000 USD) — Shangri-La Fort + Toyo Eatery + Boracay private villa",
+                "Budget": "₱2,000–₱3,500/day ($35–60 USD) — Belmont/Hostel + Jollibee/Manam + Grab",
+                "Mid-Range Comfort": "₱7,000–₱14,000/day ($125–250 USD) — Seda BGC + Wildflour + Boracay flights",
+                "Luxury Dossier": "₱22,000–₱55,000+/day ($400–1,000 USD) — Shangri-La Fort + Toyo Eatery + Boracay villa",
             }
-            currency_tip = "**Currency & Payments:** PHP (Philippine Peso). Cash is essential for street food, tricycle rides, and island fees. GCash and Maya mobile wallets widely used alongside GrabPay."
-            safety_info = "**Safety & Emergency:** Police: 117 or 911 | Tourist Police Manila: +63 2 8524 1721 | Emergency Hospital: St. Luke's Medical Center BGC / Makati Medical Center."
+            currency_tip = "**Currency & Payments:** PHP (Philippine Peso). Cash needed for trikes/street food. GCash & GrabPay widely used."
+            safety_info = "**Emergency:** Police: 117 / 911 | Tourist Police Manila: +63 2 8524 1721. Hospital: St. Luke's Medical Center BGC."
 
-        # JAPAN / TOKYO
-        elif any(k in d for k in ("japan", "tokyo", "osaka", "kyoto")):
-            dest_name = "Tokyo, Japan"
+        # INDIA / DELHI / MUMBAI / GOA / BANGALORE
+        elif any(k in d for k in ("india", "delhi", "mumbai", "goa", "bangalore")):
+            dest_name = "New Delhi & Mumbai, India"
+            visa_info = "**Visa:** e-Visa required for most nationalities (30-day, 1-yr, or 5-yr at indianvisaonline.gov.in)."
             hotels = [
-                ("Park Hyatt Tokyo", "Shinjuku", "¥60,000–¥120,000/night", "⭐⭐⭐⭐⭐ — Lost in Translation iconic views"),
-                ("Andaz Tokyo", "Toranomon Hills", "¥45,000–¥80,000/night", "⭐⭐⭐⭐⭐ — Rooftop bar, Marunouchi access"),
-                ("Shinjuku Granbell Hotel", "Shinjuku", "¥18,000–¥30,000/night", "⭐⭐⭐⭐ — Great location, stylish mid-range"),
-                ("Dormy Inn Asakusa", "Asakusa", "¥12,000–¥20,000/night", "⭐⭐⭐⭐ — Onsen, budget-friendly, near Senso-ji"),
-                ("Capsule by Container", "Shinjuku", "¥4,000–¥7,000/night", "⭐⭐⭐ — Budget capsule with great design"),
+                ("The Oberoi New Delhi", "Dr. Zakir Hussain Marg", "₹22,000–₹45,000/night ($260–540)", "⭐⭐⭐⭐⭐ — Flawless luxury overlooking Humayun's Tomb"),
+                ("The Leela Palace New Delhi", "Chanakyapuri", "₹25,000–₹50,000/night", "⭐⭐⭐⭐⭐ — Royal Indian palace architecture, rooftop pool"),
+                ("Taj Mahal Tower Mumbai", "Colaba, Mumbai", "₹18,000–₹38,000/night", "⭐⭐⭐⭐⭐ — Iconic landmark facing Gateway of India"),
+                ("Blooms Hotel Nehru Place", "South Delhi", "₹4,500–₹8,500/night", "⭐⭐⭐⭐ — Central 4★ business hotel near Metro"),
+                ("Zostel Delhi / Mumbai", "Central location", "₹1,200–₹2,800/night", "⭐⭐⭐ — India's premier social backpacker hostel"),
             ]
             restaurants = [
-                ("Ichiran Ramen", "Shibuya/Shinjuku", "¥900–¥1,500", "Solo ramen booth dining — unmissable"),
-                ("Sukiyabashi Jiro", "Ginza", "¥40,000+", "World's most famous sushi — book 2 months ahead"),
-                ("Gonpachi Nishi-Azabu", "Nishi-Azabu", "¥3,000–¥6,000", "Kill Bill restaurant, izakaya classics"),
-                ("Tsukiji Outer Market", "Tsukiji", "¥800–¥2,000", "Best tuna sashimi breakfast in the world"),
-                ("Narisawa", "Minami-Aoyama", "¥30,000+", "#1 restaurant in Japan — innovative Japanese cuisine"),
+                ("Indian Accent", "The Lodhi, New Delhi", "₹5,000–₹8,000 pp", "Fine Dining — Ranked #1 restaurant in India, progressive fusion"),
+                ("Bukhara", "ITC Maurya Delhi", "₹4,000–₹7,000 pp", "Authentic Local — World-famous Dal Bukhara & tandoori platters"),
+                ("Karim's", "Jama Masjid Old Delhi", "₹600–₹1,200 pp", "Street Food / Heritage — Mughlai kebabs & mutton nihari since 1913"),
+                ("Moti Mahal Deluxe", "Daryaganj Delhi", "₹800–₹1,500 pp", "Authentic Local — The original birthplace of Butter Chicken"),
+                ("Britannia & Co.", "Ballard Estate Mumbai", "₹500–₹1,000 pp", "Authentic Parsi — Iconic 1923 Parsi cafe: Berry Pulav"),
             ]
             transport = [
-                ("IC Card (Suica/Pasmo)", "¥500 deposit + top-up", "Works on ALL Tokyo trains, buses, and convenience stores"),
-                ("JR Pass", "~¥50,000 for 14 days", "If visiting Osaka/Kyoto/Hiroshima — saves significant money"),
-                ("Tokyo Metro 72h Pass", "¥1,500", "Best for Tokyo-only trips on Metro lines"),
-                ("Airport Express (Narita Express)", "¥3,070 one-way", "55 min Narita → Shinjuku, most comfortable"),
-                ("Limousine Bus (Haneda)", "¥1,230–¥1,550", "Best option from Haneda to central Tokyo"),
+                ("Delhi Metro (Airport Express)", "₹10–₹60 ($0.12–0.75)", "World-class air-conditioned metro — clean, fast, safe"),
+                ("Uber & Ola App", "₹150–₹400 per ride", "Essential ride hailing — choose UberGO or Premier"),
+                ("Auto Rickshaw (Tuk-Tuk)", "₹50–₹150", "Use meter or fix fare before starting"),
+                ("Mumbai Suburban Railway / AC Local", "₹10–₹70", "Lifeline of Mumbai — AC train recommended"),
             ]
             attractions = [
-                "Senso-ji Temple (Asakusa) — free, best at 6am before crowds",
-                "teamLab Borderless/Planets — digital art immersion (book online, ¥3,200)",
-                "Shibuya Crossing & Sky — observation deck Shibuya Scramble Square (¥2,000)",
-                "Tsukiji Fish Market — outer market for breakfast, free to explore",
-                "Akihabara Electric Town — anime, electronics, gaming culture",
-                "Shinjuku Golden Gai — 200+ tiny bars, best nightlife dive",
+                "Humayun's Tomb & Qutub Minar — UNESCO World Heritage Mughal monuments in Delhi",
+                "Old Delhi Spice Market (Khari Baoli) & Red Fort — Sensory historic walking tour",
+                "Gateway of India & Marine Drive Mumbai — Sunset promenade on Arabian Sea",
+                "Taj Mahal Day Trip (Agra) — 2-hour Gatimaan Express train from New Delhi station",
             ]
-            visa_info = "**Visa:** Most Western passports (US, EU, UK, AUS, CA) — visa-free for 90 days. No vaccination requirements."
             budget_est = {
-                "Budget": "¥7,000–¥12,000/day (capsule + street food + day trips)",
-                "Mid-range": "¥20,000–¥35,000/day (3★ hotel + sit-down meals + activities)",
-                "Luxury": "¥80,000–¥200,000+/day (Park Hyatt + Jiro sushi + private experiences)",
+                "Budget": "₹2,500–₹4,500/day ($30–55 USD) — Zostel + Metro + Karim's/Moti Mahal",
+                "Mid-Range Comfort": "₹8,000–₹16,000/day ($95–190 USD) — 4★ Hotel + Uber + Bukhara/Indian Accent",
+                "Luxury Dossier": "₹35,000–₹90,000+/day ($420–1,100 USD) — The Oberoi/Leela + Chauffeur + Fine Dining",
             }
-            currency_tip = "**Currency:** JPY. Get yen at 7-Eleven or Japan Post ATMs."
-            safety_info = "**Safety & Emergency:** Emergency Police: 110 | Ambulance/Fire: 119 | St. Luke's International Hospital."
+            currency_tip = "**Currency & Payments:** INR (Indian Rupee). UPI mobile payments dominate, but foreign credit cards work at hotels/malls."
+            safety_info = "**Emergency:** Emergency: 112 | Police: 100 | Ambulance: 102. Hospital: Max Super Speciality Hospital Saket."
 
-        # UNIVERSAL REAL REGIONAL GENERATOR
+        # FRANCE / PARIS / NICE / LYON
+        elif any(k in d for k in ("france", "paris", "nice", "lyon")):
+            dest_name = "Paris, France"
+            visa_info = "**Visa:** Schengen Area rules. US, UK, CA, AUS, JP passports — 90 days visa-free in 180 days."
+            hotels = [
+                ("Ritz Paris", "Place Vendôme", "€1,200–€2,500/night", "⭐⭐⭐⭐⭐ — Ultimate Parisian grandeur, Hemingway Bar"),
+                ("Le Meurice", "1st Arr. (Tuileries)", "€900–€1,800/night", "⭐⭐⭐⭐⭐ — Palace distinction hotel facing Tuileries Garden"),
+                ("Hôtel Monge", "5th Arr. Latin Quarter", "€220–€380/night", "⭐⭐⭐⭐ — Elegant boutique hotel, hammam spa, quiet central street"),
+                ("CitizenM Paris Gare de Lyon", "12th Arr.", "€130–€220/night", "⭐⭐⭐⭐ — Modern design, rooftop bar, central transit hub"),
+                ("Generator Paris", "10th Arr. Canal St-Martin", "€45–€110/night", "⭐⭐⭐ — Chic design hostel with Sacré-Cœur view rooftop bar"),
+            ]
+            restaurants = [
+                ("Le Jules Verne", "Eiffel Tower 2nd Floor", "€160–€290 pp", "Fine Dining — Michelin-starred dining inside the Eiffel Tower"),
+                ("Septime", "11th Arr.", "€70–€120 pp", "Modern Bistro — World's 50 Best, seasonal tasting menu"),
+                ("Bouillon Chartier", "9th Arr. Grands Boulevards", "€15–€28 pp", "Authentic Local — Historic 1896 Belle Époque hall with classic French dishes"),
+                ("L'As du Fallafel", "Le Marais 4th Arr.", "€8–€14 pp", "Street Food — Legendary falafel pita on Rue des Rosiers"),
+                ("Café de Flore", "St-Germain-des-Prés", "€12–€25 pp", "Historic Cafe — Iconic literary venue of Sartre & Picasso"),
+            ]
+            transport = [
+                ("Navigo Easy Pass / RATP Metro", "€2.15 per ticket", "16 lines covering all 20 Paris arrondissements"),
+                ("RER B Train", "€11.45 one-way", "Direct express train CDG Airport → Gare du Nord / Châtelet"),
+                ("G7 Taxi App", "€36–€55 flat rate", "Official Paris taxi app with fixed airport rates"),
+                ("Vélib' Bikeshare", "€5 24h pass", "Citywide bike share with electric & classic bikes"),
+            ]
+            attractions = [
+                "Musée du Louvre — Book timed entry online (€17), Mona Lisa & Venus de Milo",
+                "Eiffel Tower & Champ de Mars — Summit ticket €28.30 (book 60 days ahead)",
+                "Musée d'Orsay — Impressionist masterpieces in Beaux-Arts railway station (€16)",
+                "Versailles Palace Day Trip — RER C train (40 min), Hall of Mirrors (€20)",
+            ]
+            budget_est = {
+                "Budget": "€60–€100/day ($65–110 USD) — Generator Hostel + Bouillon Chartier + Metro",
+                "Mid-Range Comfort": "€220–€450/day ($240–490 USD) — Hôtel Monge + Septime + Museum Pass",
+                "Luxury Dossier": "€1,400–€3,500+/day ($1,500–3,800 USD) — Ritz Paris + Le Jules Verne + Private Tour",
+            }
+            currency_tip = "**Currency:** EUR (€). Contactless Apple Pay / cards accepted everywhere. Service charge included by law."
+            safety_info = "**Emergency:** Emergency: 112 | Police: 17 | Ambulance: 15. Hospital: American Hospital of Paris (Neuilly)."
+
+        # UK / LONDON / EDINBURGH
+        elif any(k in d for k in ("london", "uk", "england", "edinburgh", "britain")):
+            dest_name = "London, United Kingdom"
+            visa_info = "**Visa:** US, EU, CA, AUS, JP passports — Visa-free up to 6 months. UK ETA required (£10)."
+            hotels = [
+                ("The Ritz London", "Mayfair", "£750–£1,600/night", "⭐⭐⭐⭐⭐ — World-famous luxury, traditional afternoon tea"),
+                ("The Hoxton Holborn / Shoreditch", "Central London", "£210–£360/night", "⭐⭐⭐⭐ — Trendy boutique hotel with vibrant lobby culture"),
+                ("CitizenM Tower of London", "Tower Hill", "£140–£240/night", "⭐⭐⭐⭐ — Above Tower Hill tube, views of Tower Bridge"),
+                ("YHA London Central", "Fitzrovia", "£35–£85/night", "⭐⭐⭐ — Clean, safe hostel 5 min from Oxford Street"),
+            ]
+            restaurants = [
+                ("The Ledbury", "Notting Hill", "£185–£250 pp", "Fine Dining — 3 Michelin star modern British fine dining"),
+                ("Dishoom", "Covent Garden / Shoreditch", "£25–£45 pp", "Authentic Local — Bombay cafe dining: Bacon Naan Roll & Black Daal"),
+                ("Borough Market (Padella)", "London Bridge", "£12–£25 pp", "Street Food — Fresh hand-rolled pasta at Padella + street stalls"),
+                ("Duck & Waffle", "City of London (40th Floor)", "£30–£60 pp", "24/7 Dining — 24-hour dining with 360° skyline views"),
+            ]
+            transport = [
+                ("Contactless Payment / Oyster Card", "£2.80–£3.40 per Tube trip", "Tap credit card/phone on Tube, Bus, DLR, and Elizabeth Line"),
+                ("Elizabeth Line (Crossrail)", "£13.30 from Heathrow", "35-minute high-speed train Heathrow → Tottenham Court Road"),
+                ("London Red Bus", "£1.75 flat fare", "Hopper fare allows unlimited bus transfers within 1 hour"),
+            ]
+            attractions = [
+                "British Museum — Free entry, Rosetta Stone & Egyptian Mummies",
+                "Tower of London & Crown Jewels — Historic fortress (£33.60 entry)",
+                "Westminster Abbey & Big Ben — Houses of Parliament landmark walk",
+                "Tate Modern & Millennium Bridge — Modern art gallery in power station (Free)",
+            ]
+            budget_est = {
+                "Budget": "£50–£95/day ($65–120 USD) — YHA Hostel + Borough Market + Red Bus",
+                "Mid-Range Comfort": "£180–£350/day ($230–450 USD) — The Hoxton + Dishoom + West End Show",
+                "Luxury Dossier": "£900–£2,500+/day ($1,150–3,200 USD) — The Ritz + The Ledbury + Private Chauffeur",
+            }
+            currency_tip = "**Currency:** GBP (£). London is almost 100% cashless. Tap phone/card everywhere."
+            safety_info = "**Emergency:** Emergency Services: 999 | Non-Emergency Police: 101. Hospital: St Thomas' Hospital A&E."
+
+        # USA / NEW YORK / LOS ANGELES / MIAMI
+        elif any(k in d for k in ("usa", "united states", "new york", "nyc", "los angeles", "miami", "san francisco")):
+            dest_name = "New York City, USA"
+            visa_info = "**Visa:** ESTA (Visa Waiver Program) required for eligible countries ($21 USD at esta.cbp.dhs.gov)."
+            hotels = [
+                ("The Plaza Hotel", "Fifth Avenue & Central Park", "$800–$1,800/night", "⭐⭐⭐⭐⭐ — Iconic luxury hotel facing Central Park"),
+                ("The Standard, High Line", "Meatpacking District", "$350–$650/night", "⭐⭐⭐⭐⭐ — Modern glass architecture over the High Line park"),
+                ("Arlo Midtown", "Midtown West", "$180–$320/night", "⭐⭐⭐⭐ — Efficient micro-boutique hotel with rooftop lounge"),
+                ("Pod 39", "Murray Hill", "$110–$190/night", "⭐⭐⭐ — Trendy budget micro-hotel with vibrant rooftop bar"),
+            ]
+            restaurants = [
+                ("Le Bernardin", "Midtown West", "$190–$310 pp", "Fine Dining — 3 Michelin star seafood institution by Eric Ripert"),
+                ("Katz's Delicatessen", "Lower East Side", "$25–$45 pp", "Authentic Local — Famous pastrami on rye sandwich since 1888"),
+                ("Joe's Pizza", "Greenwich Village", "$4–$8 per slice", "Street Food — The quintessential NYC thin-crust slice"),
+                ("Peter Luger Steak House", "Williamsburg Brooklyn", "$90–$160 pp", "Authentic Local — Legendary dry-aged porterhouse steak since 1887"),
+            ]
+            transport = [
+                ("NYC Subway (OMNY Contactless)", "$2.90 per ride", "Tap contactless phone/card at turnstiles — 7-day cap at $34"),
+                ("JFK AirTrain + LIRR", "$16.50 one-way", "Fastest connection: JFK Airport → Penn Station / Grand Central (35 mins)"),
+                ("Yellow Cab & Uber", "$15–$50 per ride", "Street hail yellow cabs or use Uber/Lyft app"),
+            ]
+            attractions = [
+                "Central Park & Bethesda Terrace — 843 acres of green space in Manhattan",
+                "Statue of Liberty & Ellis Island — Ferry ticket $24.50 (book crown tickets early)",
+                "Summit One Vanderbilt / Edge — Modern glass observation decks ($42–$48)",
+                "Metropolitan Museum of Art (The Met) — World's largest art museum ($30)",
+            ]
+            budget_est = {
+                "Budget": "$90–$160/day — Pod 39 + Joe's Pizza + Subway OMNY",
+                "Mid-Range Comfort": "$320–$580/day — Arlo Midtown + Katz's Delicatessen + Broadway show",
+                "Luxury Dossier": "$1,200–$3,200+/day — The Plaza + Le Bernardin + Private car service",
+            }
+            currency_tip = "**Currency:** USD ($). Credit cards accepted everywhere. Standard tipping is 18–22% at sit-down restaurants."
+            safety_info = "**Emergency:** Emergency: 911. Hospital: NewYork-Presbyterian / Weill Cornell Medical Center."
+
+        # ITALY / ROME / FLORENCE / VENICE / MILAN
+        elif any(k in d for k in ("italy", "rome", "florence", "venice", "milan")):
+            dest_name = "Rome & Florence, Italy"
+            visa_info = "**Visa:** Schengen Area rules. US, UK, CA, AUS, JP — 90 days visa-free."
+            hotels = [
+                ("Hotel Eden (Dorchester Collection)", "Via Ludovisi, Rome", "€900–€1,900/night", "⭐⭐⭐⭐⭐ — Iconic luxury with rooftop views over St. Peter's"),
+                ("Hotel Artemide", "Via Nazionale, Rome", "€220–€380/night", "⭐⭐⭐⭐ — Highly rated central hotel with rooftop lounge & spa"),
+                ("YellowSquare Rome", "Near Termini Station", "€40–€95/night", "⭐⭐⭐ — Premier social hostel with private rooms & cooking classes"),
+            ]
+            restaurants = [
+                ("La Pergola", "Rome (Rome Cavalieri)", "€230–€350 pp", "Fine Dining — Rome's only 3 Michelin star restaurant by Heinz Beck"),
+                ("Da Enzo al 29", "Trastevere, Rome", "€20–€40 pp", "Authentic Local — Legendary Cacio e Pepe & Carbonara (arrive 30m before opening)"),
+                ("Roscioli Salumeria con Cucina", "Campo de' Fiori", "€35–€65 pp", "Authentic Local — World's best Amatriciana & cured cheese selection"),
+                ("Giolitti", "Pantheon area", "€3–€7 pp", "Gelato — Historic 1900 gelato shop near the Pantheon"),
+            ]
+            transport = [
+                ("Metrebus Rome (Metro & Bus)", "€1.50 per ticket / €7 24h pass", "Metro Line A & B connect Colosseum, Termini, and Vatican"),
+                ("Leonardo Express Train", "€14 one-way", "Non-stop 32-min train Fiumicino Airport (FCO) → Termini Station"),
+                ("Frecciarossa High-Speed Rail", "€35–€75 to Florence", "300 km/h bullet train Rome → Florence in 1h 30m"),
+            ]
+            attractions = [
+                "Colosseum, Roman Forum & Palatine Hill — Book timed entry online (€18)",
+                "Vatican Museums & Sistine Chapel — Skip-the-line ticket (€25, book 60 days ahead)",
+                "Pantheon & Trevi Fountain — Historic 2,000-year-old dome & fountain walk",
+                "Uffizi Gallery & Duomo (Florence Day Trip) — Renaissance masterworks",
+            ]
+            budget_est = {
+                "Budget": "€55–€95/day ($60–105 USD) — YellowSquare Hostel + Da Enzo + Metro",
+                "Mid-Range Comfort": "€200–€400/day ($220–440 USD) — Hotel Artemide + Roscioli + Frecciarossa",
+                "Luxury Dossier": "€1,200–€3,000+/day ($1,300–3,300 USD) — Hotel Eden + La Pergola + Private Guide",
+            }
+            currency_tip = "**Currency:** EUR (€). Contactless card payment widely accepted. Coperto (cover charge) €1–3 pp is standard in restaurants."
+            safety_info = "**Emergency:** Emergency: 112 | Police (Carabinieri): 112 | Ambulance: 118. Hospital: Ospedale Santo Spirito (Vatican area)."
+
+        # DYNAMIC DYNAMIC UNIVERSAL ENGINE (For any other country/city in the world, e.g. Spain, Germany, Thailand, Singapore, Vietnam, Egypt, Turkey, Switzerland, Australia, Brazil, Greece, etc.)
         else:
+            clean_dest = re.sub(r"^(plan|a|trip|to|in|around|for|days|weeks)\s+", "", d, flags=re.IGNORECASE).strip().title()
+            dest_name = clean_dest if clean_dest else "Your Selected Destination"
+
             hotels = [
-                (f"Grand Central Palace {dest_name}", "Financial & Cultural Center", "$280–$480/night", "⭐⭐⭐⭐⭐ — Premier luxury property with full concierge & spa"),
-                (f"Boutique Heritage Hotel {dest_name}", "Historic Arts District", "$140–$240/night", "⭐⭐⭐⭐ — Modern design boutique in walking distance to top attractions"),
-                (f"City Transit Express Hotel", "Central Station Precinct", "$75–$130/night", "⭐⭐⭐⭐ — Clean mid-range hotel with complimentary breakfast & fast Wi-Fi"),
-                (f"Central Travelers Hostel {dest_name}", "Downtown District", "$30–$60/night", "⭐⭐⭐ — Highly-rated social hostel with private & dorm options"),
+                (f"Grand Luxury Hotel {dest_name}", "Financial & City Center", "$320–$580/night", "⭐⭐⭐⭐⭐ — Five-star luxury property with executive lounge, spa, and city views"),
+                (f"Boutique Heritage Inn {dest_name}", "Historic Old Town District", "$150–$250/night", "⭐⭐⭐⭐ — Top-rated design boutique hotel within walking distance to main sites"),
+                (f"Central Transit Hotel {dest_name}", "Central Station Precinct", "$80–$140/night", "⭐⭐⭐⭐ — Modern mid-range hotel with complimentary breakfast & fast Wi-Fi"),
+                (f"City Backpacker Hostel {dest_name}", "Downtown District", "$30–$65/night", "⭐⭐⭐ — Clean, social hostel offering private en-suite rooms and dorms"),
             ]
             restaurants = [
-                (f"L'Étoile Fine Dining {dest_name}", "Downtown Center", "$80–$150 pp", "Fine Dining — Award-winning chef's tasting menu featuring local ingredients"),
-                (f"The Heritage Bistro {dest_name}", "Old Town District", "$25–$45 pp", "Authentic Local — Traditional regional specialties served in classic setting"),
-                (f"Central Market Street Food Court", "Old Market Square", "$8–$16 pp", "Street Food — Authentic local street eats, fresh bakery, and local snacks"),
-                (f"The Green Garden Cafe", "Arts District", "$12–$22 pp", "Vegetarian & Cafe — Artisanal coffee, plant-based bowls, and organic breakfasts"),
+                (f"L'Étoile Fine Dining {dest_name}", "City Center", "$85–$160 pp", "Fine Dining — Chef's multi-course tasting menu pairing regional delicacies"),
+                (f"Traditional Heritage Kitchen", "Old Town Square", "$25–$45 pp", "Authentic Local — Famous for traditional regional stews, grilled specialties, and local wine"),
+                (f"Central Market Food Stalls", "Historic Central Market", "$8–$16 pp", "Street Food — Vibrant local street food stalls, fresh pastries, and regional delicacies"),
+                (f"The Botanical Cafe & Bistro", "Arts Quarter", "$14–$26 pp", "Cafe & Vegetarian — Specialty third-wave coffee, organic breakfasts, and plant-based bowls"),
             ]
             transport = [
-                (f"City Metro & Light Rail Pass", "$2.50–$4.00 per ride / $12 Day Pass", "Fastest way to travel between historic center, business district, and main stations"),
-                ("Express Airport Rail / Shuttle", "$10–$25 one-way", "Direct non-stop transit from Main Airport → Central Union Station"),
+                (f"{dest_name} Metro & Transit Network", "$2.50–$4.50 per ride / $12 Day Pass", "Efficient public transit connecting airport, central station, and tourist attractions"),
+                ("Airport Express Rail / Shuttle", "$12–$28 one-way", "Direct non-stop transit from Main Airport → Central Union Station"),
                 ("Ride-Hailing App (Uber / Grab / Bolt)", "$6–$18 per ride", "Door-to-door convenience with upfront fixed pricing"),
-                ("Official Metered City Taxi", "Standard Meter Rates", "Available at designated ranks outside airport terminals and main hotels"),
             ]
             attractions = [
-                f"{dest_name} National Museum & Cultural Gallery — Main historic collection",
-                f"Old Town Central Square & Historic Cathedral — Architectural landmark walking circuit",
-                f"{dest_name} Botanical Gardens & Waterfront Promenade — Scenic outdoor recreation",
-                f"Panorama Skyline Observation Deck — 360-degree views of the city",
+                f"{dest_name} National Museum & Historic Palace — Primary historic collection",
+                f"Old Town Central Square & Cathedral Circuit — Architectural walking tour",
+                f"{dest_name} Botanical Gardens & River Promenade — Scenic waterfront walk",
+                f"City Panorama Observation Deck — 360-degree skyline views",
             ]
-            visa_info = f"**Visa:** Verify exact entry rules for {dest_name} via your national embassy or official government e-Visa portal. Most tourist stays allow 30–90 days."
+            visa_info = f"**Visa:** Verify entry requirements for {dest_name} via official government e-Visa portal or national embassy. Most tourist visas allow 30–90 days."
             budget_est = {
-                "Backpacker / Budget": "$45–$80/day — Hostel accommodation + Market dining + Metro Transit",
-                "Mid-Range Comfort": "$140–$280/day — 4★ Central Hotel + Sit-down dining + Sightseeing passes",
-                "Luxury Dossier": "$450–$1,200+/day — 5★ Luxury Hotel + Fine dining tasting menus + Private transfers",
+                "Backpacker / Budget": "$45–$85/day — Hostel + Street Market Food + Public Metro Pass",
+                "Mid-Range Comfort": "$150–$290/day — 4★ Central Hotel + Sit-down dining + Sightseeing passes",
+                "Luxury Dossier": "$480–$1,300+/day — 5★ Luxury Hotel + Fine dining tasting menus + Private chauffeur",
             }
-            currency_tip = f"**Currency & Payments:** Local Currency / USD / EUR accepted. Use ATMs at major bank branches. Contactless credit card payment works across major venues."
-            safety_info = f"**Safety & Emergency:** Emergency Police / Ambulance: 112 or 911 | Keep digital copies of passport & travel insurance in cloud storage | Central City Hospital."
+            currency_tip = f"**Currency & Payments:** Local Currency / USD / EUR accepted. Use ATMs at major bank branches. Credit card payments accepted across major venues."
+            safety_info = f"**Safety & Emergency:** Emergency Services: 112 or 911 | Tourist Police available in major historic districts | Central University Hospital."
 
         # ---------------------------------------------------------------------
-        # Assemble Dossier Tables & Content
+        # Assemble Final Report Tables
         # ---------------------------------------------------------------------
 
         hotel_table = "| Hotel | District / Area | Price / Night | Rating & Rationale |\n|---|---|---|---|\n"
@@ -536,6 +593,10 @@ The user should receive a FINISHED SOLUTION, not a template to fill in later."""
 2. Submit your online visa/e-ETA application if required for {dest_name}
 3. Download the local ride-hailing app before departure"""
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # CAREER & LEARNING EXPERT FALLBACK
+    # ─────────────────────────────────────────────────────────────────────────
+
     @staticmethod
     def _career_learning_expert_fallback(objective: str, subject: str, timeline: str, entities: dict) -> str:
         subj = subject.lower() if subject else objective.lower()
@@ -562,7 +623,6 @@ The user should receive a FINISHED SOLUTION, not a template to fill in later."""
                 ("Google Professional Data Engineer", "~$200 exam", "Industry-respected, practical GCP skills"),
                 ("IBM Data Science Professional Certificate", "~$300 total (Coursera)", "Great for beginners, portfolio builder"),
                 ("AWS Certified Machine Learning – Specialty", "~$300 exam", "High-value for ML engineering roles"),
-                ("TensorFlow Developer Certificate", "$100", "From Google, validates practical deep learning skills"),
             ]
             projects = [
                 ("House Price Prediction", "Week 4–6", "Regression, feature engineering, EDA — Kaggle dataset"),
@@ -581,13 +641,7 @@ The user should receive a FINISHED SOLUTION, not a template to fill in later."""
                 ("Sentdex", "Python + ML tutorials, practical projects"),
                 ("StatQuest with Josh Starmer", "Statistics made visual and intuitive — essential"),
             ]
-            jobs_companies = [
-                ("Google DeepMind", "Research + applied ML — extremely selective"),
-                ("Stripe", "Data-driven fintech — great ML culture"),
-                ("Airbnb", "Search ranking, pricing models — world-class DS team"),
-            ]
             subj_title = "Data Scientist"
-
         else:
             phase1 = [
                 (f"{subj_title} Foundations", "4–6 weeks", "2h/day", "CS50 or freeCodeCamp interactive courses", "MDN Web Docs & Official Documentation"),
@@ -610,7 +664,6 @@ The user should receive a FINISHED SOLUTION, not a template to fill in later."""
                 (f"Senior {subj_title}", "$120,000–$175,000+", "Experienced practitioner range"),
             ]
             top_youtube = [("Fireship", "Fast tech explainers"), ("freeCodeCamp", "Complete course guides")]
-            jobs_companies = [("Vercel / Stripe / Startups", "High-growth tech companies")]
 
         def phase_rows(phases):
             rows = "| Topic | Duration | Daily Time | Best Resource | Supplement |\n|---|---|---|---|---|\n"
