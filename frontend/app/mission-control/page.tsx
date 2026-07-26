@@ -264,15 +264,31 @@ export default function MissionControl() {
     try {
       const reply = await apiPromise;
       detectedIntent = reply.agent_metadata?.intent ?? "task";
-      const steps   = reply.agent_metadata?.steps ?? [];
+      const rawOps = reply.agent_metadata?.operations ?? [];
+      const steps = reply.agent_metadata?.steps ?? (rawOps.length > 0 ? rawOps.map((o: any) => o.title) : ["Analyze objective", "Decompose domain requirements", "Execute side effects", "Generate deliverables"]);
       const actions = reply.agent_metadata?.actions as any ?? {};
 
-      setOsState("executing");
-      setActiveView("operations");
+      setOsState("complete");
+      setAgentNodes(BASE_NODES.map(n=>({...n,status:"done"})));
 
       const mission = buildMission(objective, detectedIntent, steps);
       setCurrentMission(mission);
       setMessages(p=>p.map(m=>m.id===tmpId?m:m).concat([reply]));
+
+      setObjectivesRun(p=>p+1);
+      setInsight({
+        objective,
+        intent: detectedIntent,
+        executionMs: Date.now()-execStartMs,
+        opsCount: steps.length,
+        tasksCreated: actions.tasks_created ?? steps.length,
+        tripCreated: actions.trip_created,
+        reminderCreated: actions.reminder_created,
+        steps,
+      });
+
+      if (token) loadData(token);
+      setTimeout(()=>setOsState("idle"),10000);
 
     } catch {
       setOsState("idle");
@@ -556,14 +572,49 @@ export default function MissionControl() {
                           </span>
                         )}
                       </div>
-                      {plan?.steps && (
+                      {/* Render Operations List */}
+                      {plan?.operations && plan.operations.length > 0 && (
+                        <div className="space-y-2.5 mb-4">
+                          {plan.operations.map((op: any, i: number) => (
+                            <div key={i} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="mono text-xs text-amber-400 font-bold w-5">{String(i + 1).padStart(2, "0")}</span>
+                                  <span className="text-white/85 text-xs font-semibold">{op.title}</span>
+                                </div>
+                                {op.artifact_type && op.artifact_type !== "none" && (
+                                  <span className="mono text-[10px] px-2 py-0.5 rounded bg-white/[0.04] text-amber-400/80 uppercase">
+                                    {op.artifact_type}
+                                  </span>
+                                )}
+                              </div>
+                              {op.why_this && (
+                                <p className="text-[11px] text-white/40 italic ml-7 mb-1">Why this? {op.why_this}</p>
+                              )}
+                              {op.description && (
+                                <p className="text-xs text-white/55 ml-7 leading-relaxed">{op.description}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Render Legacy Steps if operations not present */}
+                      {!plan?.operations && plan?.steps && plan.steps.length > 0 && (
                         <div className="space-y-2 mb-4">
-                          {plan.steps.map((step:string,i:number)=>(
+                          {plan.steps.map((step: string, i: number) => (
                             <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.03]">
-                              <span className="mono text-xs text-amber-400 font-bold w-6 text-center">{String(i+1).padStart(2,"0")}</span>
+                              <span className="mono text-xs text-amber-400 font-bold w-6 text-center">{String(i + 1).padStart(2, "0")}</span>
                               <span className="text-white/60 text-xs">{step}</span>
                             </div>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Full Markdown Output text preview */}
+                      {assistantMsg?.content && (
+                        <div className="mt-4 p-4 rounded-xl bg-black/30 border border-white/[0.04] text-xs text-white/70 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto leading-relaxed">
+                          {assistantMsg.content}
                         </div>
                       )}
                       {(plan?.actions as any) && (
