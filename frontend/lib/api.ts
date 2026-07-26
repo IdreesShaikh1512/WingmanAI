@@ -53,7 +53,15 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, body.detail ?? "Request failed");
+    let errorMsg = "Request failed";
+    if (typeof body.detail === "string") {
+      errorMsg = body.detail;
+    } else if (Array.isArray(body.detail)) {
+      errorMsg = body.detail.map((d: any) => d.msg || JSON.stringify(d)).join("; ");
+    } else if (body.detail) {
+      errorMsg = JSON.stringify(body.detail);
+    }
+    throw new ApiError(response.status, errorMsg);
   }
 
   if (response.status === 204) return undefined as T;

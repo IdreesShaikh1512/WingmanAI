@@ -1,10 +1,9 @@
-"""Trip entity - Travel Agent's domain object."""
+"""Trip entity."""
 
 import uuid
 from datetime import date
 
-from sqlalchemy import JSON, Date, ForeignKey, Numeric, String
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import JSON, Date, ForeignKey, Numeric, String, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.base import TimestampedEntity
@@ -13,7 +12,7 @@ from database.base import TimestampedEntity
 class Trip(TimestampedEntity):
     __tablename__ = "trips"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     destination: Mapped[str] = mapped_column(String(255), nullable=False)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)

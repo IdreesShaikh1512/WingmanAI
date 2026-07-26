@@ -160,9 +160,53 @@ export default function MissionControl() {
   }, []);
 
   useEffect(() => {
-    if (!token) { router.replace("/login"); return; }
-    api.createChat(token).then(c=>setChatId(c.id)).catch(()=>{});
-    loadData(token);
+    async function initSession() {
+      let activeToken = token;
+      let activeUser = user;
+
+      // Auto-guest login if no active session exists
+      if (!activeToken) {
+        try {
+          const testEmail = "testuser_intelligence@wingman.os";
+          const testPass = "SecurePassword123!";
+          let tokens;
+          try {
+            tokens = await api.login(testEmail, testPass);
+          } catch {
+            await api.register(testEmail, testPass, "Autonomous User");
+            tokens = await api.login(testEmail, testPass);
+          }
+          activeUser = await api.getMe(tokens.access_token);
+          activeToken = tokens.access_token;
+          useAuthStore.getState().setSession(activeToken, activeUser);
+        } catch {
+          router.replace("/login");
+          return;
+        }
+      }
+
+      if (!activeToken) return;
+
+      try {
+        const c = await api.createChat(activeToken);
+        setChatId(c.id);
+        loadData(activeToken);
+
+        // Check for initialObjective passed from landing page URL
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const initialObj = params.get("initialObjective");
+          if (initialObj && c.id) {
+            // Trigger automatic execution
+            setTimeout(() => {
+              executeObjective(initialObj);
+            }, 300);
+          }
+        }
+      } catch {}
+    }
+
+    initSession();
   }, [token, router, loadData]);
 
   // Ctrl+K
@@ -278,7 +322,16 @@ export default function MissionControl() {
   );
   const pendingTaskCount = tasks.filter(t=>t.status!=="done").length;
 
-  if (!token||!user) return null;
+  const activeUser = user || { email: "guest@wingman.os", full_name: "Autonomous Guest", id: "guest", is_active: true };
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0c] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-10 h-10 rounded-full border-2 border-amber-400 border-t-transparent animate-spin mb-4" />
+        <p className="mono text-xs text-amber-400 uppercase tracking-widest">Initializing Wingman OS Session…</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${bgClass} transition-all duration-1000 flex flex-col relative overflow-hidden`}>
@@ -404,7 +457,7 @@ export default function MissionControl() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-white/25">User</span>
-                <span className="mono text-xs text-white/35 truncate max-w-[90px]">{user.email.split("@")[0]}</span>
+                <span className="mono text-xs text-white/35 truncate max-w-[90px]">{activeUser.email.split("@")[0]}</span>
               </div>
             </div>
           </div>
