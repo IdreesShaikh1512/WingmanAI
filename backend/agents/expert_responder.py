@@ -582,7 +582,7 @@ End with a "✅ Take Action Now" section with the 3 most important immediate ste
         timeline_note = f" in {timeline}" if timeline else " in 6–12 months"
 
         # Subject-specific real resources
-        if "data science" in subj or "machine learning" in subj or "ml" in subj:
+        if any(term in subj for term in ("data science", "data scientist", "machine learning", "ml", "ai")):
             phase1 = [
                 ("Python Programming", "6–8 weeks", "2h/day", "CS50P (Harvard/edX, FREE)", "YouTube: Corey Schafer Python Tutorial"),
                 ("Statistics & Probability", "4–6 weeks", "1.5h/day", "Khan Academy Statistics (FREE)", "Book: 'Statistics' by Freedman, Pisani & Purves"),
