@@ -1,17 +1,22 @@
 """Chat Service — Autonomous AI OS Orchestration Pipeline.
 
 Every user message flows through:
-  1. MemoryManager.read()        — Load user context for personalization
-  2. IntentRouter.classify()     — Classify domain + extract entities
-  3. InformationGatekeeper.check() — Ask follow-up questions if context is missing
-  4. PlannerAgent.plan()         — Generate domain-specific Mission
-  5. ArtifactGenerator           — Render rich markdown artifacts
-  6. _apply_side_effects()       — Create Tasks, Trips, Reminders in DB
-  7. NextActionAdvisor.suggest() — Generate proactive next steps
-  8. MemoryManager.write()       — Store new user facts for future sessions
-  9. _format_rich_response()     — Assemble the final assistant message
+  1. MemoryManager.read()           — Load user context for personalization
+  2. IntentRouter.classify()        — Classify domain + extract entities
+  3. InformationGatekeeper.check()  — Ask follow-up questions if context is missing
+  4. PlannerAgent.plan()            — Generate domain-specific Mission structure
+  5. ExpertResponder.generate()     — Generate REAL expert-level content (final answers)
+  6. _apply_side_effects()          — Create Tasks, Trips, Reminders in DB
+  7. NextActionAdvisor.suggest()    — Generate proactive next steps
+  8. MemoryManager.write()          — Store new user facts for future sessions
+  9. _format_rich_response()        — Assemble the final assistant message
 
-No generic templates. No repeated workflows. Every objective is reasoned independently.
+PRIMARY RULE:
+  Every response must feel like "I hired a team of experts."
+  Not: "I received a generic AI response."
+
+  NO templates. NO placeholders. NO "Option A". NO "To be calculated".
+  REAL hotels. REAL frameworks. REAL books. REAL companies. REAL prices.
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from agents.artifact_generator import generate_artifacts
+from agents.expert_responder import ExpertResponder
 from agents.information_gatekeeper import InformationGatekeeper
 from agents.intent_router import IntentRouter
 from agents.memory_manager import MemoryManager
@@ -55,6 +61,7 @@ class ChatService:
         self._gatekeeper = gatekeeper
         self._memory_manager = memory_manager
         self._next_action_advisor = next_action_advisor
+        self._expert_responder = ExpertResponder()
 
     # ------------------------------------------------------------------
     # Chat management
@@ -91,7 +98,6 @@ class ChatService:
         decision = self._gatekeeper.check(intent)
 
         if decision.needs_clarification:
-            # Return a conversational clarification message — no tasks created
             clarification_reply = self._format_clarification_reply(decision)
             return self._chat_repository.add_message(
                 chat_id,
@@ -108,11 +114,29 @@ class ChatService:
         # ── Step 4: Load domain-specific memory context ──────────────────
         domain_context = self._memory_manager.read(user_id, content, intent.domain)
 
-        # ── Step 5: Generate domain-specific Mission ─────────────────────
+        # ── Step 5: Generate domain-specific Mission structure ───────────
         mission = self._planner_agent.plan(intent, domain_context)
 
-        # ── Step 6: Render rich artifacts ────────────────────────────────
-        artifacts_markdown = generate_artifacts(mission)
+        # ── Step 6: Generate REAL expert-level content ───────────────────
+        # ExpertResponder acts as a team of senior domain consultants.
+        # Produces FINAL ANSWERS with real hotels, real frameworks, real books.
+        expert_content = self._expert_responder.generate_expert_response(
+            objective=content,
+            domain=intent.domain,
+            mission_title=mission.mission_title,
+            rationale=mission.rationale,
+            operations=[
+                {
+                    "title": op.title,
+                    "description": op.description,
+                    "artifact_type": op.artifact_type,
+                    "why_this": op.why_this,
+                }
+                for op in mission.operations
+            ],
+            entities=intent.entities,
+            user_context_snippets=domain_context.memory_snippets if domain_context.has_context() else [],
+        )
 
         # ── Step 7: Execute DB side effects ──────────────────────────────
         actions_summary = self._apply_side_effects(user_id, chat_id, content, mission)
@@ -120,12 +144,16 @@ class ChatService:
         # ── Step 8: Generate next-action suggestions ─────────────────────
         next_actions = self._next_action_advisor.suggest(intent, mission)
 
-        # ── Step 9: Persist memory facts from this exchange ──────────────
-        # (done asynchronously-style — fire and continue)
+        # ── Step 9: Assemble the complete expert response ─────────────────
         assistant_reply = self._format_rich_response(
-            mission, artifacts_markdown, actions_summary, next_actions, domain_context
+            mission=mission,
+            expert_content=expert_content,
+            actions=actions_summary,
+            next_actions=next_actions,
+            user_context=domain_context,
         )
 
+        # ── Step 10: Persist memory facts from this exchange ─────────────
         self._memory_manager.write(
             user_id=user_id,
             user_message=content,
@@ -133,7 +161,7 @@ class ChatService:
             domain=intent.domain,
         )
 
-        # ── Step 10: Persist and return the assistant message ─────────────
+        # ── Step 11: Persist and return the assistant message ─────────────
         return self._chat_repository.add_message(
             chat_id,
             role="assistant",
@@ -178,7 +206,7 @@ class ChatService:
 
         # Create trip record for travel missions
         if mission.domain == "travel":
-            destination = objective  # raw objective used as destination label
+            destination = objective
             created_trip = self._trip_repository.create(
                 user_id=user_id,
                 destination=destination,
@@ -198,7 +226,7 @@ class ChatService:
             )
             created_reminder_title = created_reminder.title
 
-        # Create a Task for each operation (maintains backward compat with task sidebar)
+        # Create a Task for each operation
         for op in mission.operations:
             self._task_repository.create(
                 user_id=user_id,
@@ -231,12 +259,20 @@ class ChatService:
     @staticmethod
     def _format_rich_response(
         mission: Mission,
-        artifacts_markdown: str,
+        expert_content: str,
         actions: dict[str, int | str | None],
         next_actions: list[str],
         user_context,  # type: ignore[no-untyped-def]
     ) -> str:
-        """Assemble the full, rich assistant response."""
+        """
+        Assemble the full expert response.
+
+        Structure:
+          1. Domain header + mission title
+          2. Expert content (real hotels, real books, real frameworks, real prices)
+          3. Proactive tracking suggestions
+          4. Execution summary (tasks/trips/reminders created)
+        """
         domain_emoji = {
             "travel": "🌍",
             "career": "🚀",
@@ -260,28 +296,17 @@ class ChatService:
             "task": "✅",
         }.get(mission.domain, "⚡")
 
-        # Header
         personalized_note = " *(personalized from your history)*" if user_context.has_context() else ""
-        header = (
-            f"## {domain_emoji} {mission.mission_title}\n\n"
-            f"**{mission.domain_label} Mission Activated**{personalized_note}\n\n"
-            f"> {mission.rationale}"
-        )
 
-        # Operations & Artifacts (the main body)
-        body = f"\n\n---\n\n{artifacts_markdown}"
+        # The expert content is the main body — no templates, no placeholders
+        # It already contains domain-specific real content generated by ExpertResponder
+        body = expert_content
 
         # Proactive suggestions
         proactive_section = ""
         if mission.proactive_suggestions:
             suggestions = "\n".join(f"- {s}" for s in mission.proactive_suggestions)
             proactive_section = f"\n\n---\n\n**🔮 Wingman is also proactively tracking:**\n{suggestions}"
-
-        # Next best actions
-        next_section = ""
-        if next_actions:
-            actions_list = "\n".join(f"- [ ] {a}" for a in next_actions)
-            next_section = f"\n\n---\n\n### 🚀 Next Best Actions\n{actions_list}"
 
         # Execution summary
         summary_parts = []
@@ -296,4 +321,4 @@ class ChatService:
         if summary_parts:
             summary_section = "\n\n---\n\n" + " · ".join(summary_parts)
 
-        return header + body + proactive_section + next_section + summary_section
+        return body + proactive_section + summary_section

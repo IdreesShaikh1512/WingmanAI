@@ -108,27 +108,32 @@ _DOMAIN_QUESTIONS: dict[str, dict[str, str]] = {
 # Domains that are "low-context" — they can execute with minimal info
 _LOW_CONTEXT_DOMAINS = {"reminder", "task", "shopping", "entertainment", "meetings"}
 
-# Maximum missing fields before we ask (per domain strictness)
+# Maximum missing fields before we ask (per domain strictness).
+# KEY PHILOSOPHY: ExpertResponder has rich built-in domain knowledge.
+# We only block and ask when it is TRULY impossible to produce value without the info.
+# For travel: only block if destination is absent — budget/timeline can be inferred.
+# For career/learning: only block if there's NO subject at all.
+# Everything else: always proceed — ExpertResponder will ask or infer within the response.
 _MAX_MISSING_BEFORE_ASKING: dict[str, int] = {
-    "travel": 1,       # Even 1 missing critical field → ask
-    "career": 1,
-    "coding": 1,
-    "business": 1,
-    "learning": 1,
-    "finance": 1,
-    "fitness": 1,
-    "reminder": 1,
-    "research": 1,
-    "writing": 1,
-    "health": 2,
-    "productivity": 2,
-    "life_planning": 1,
-    "education": 1,
-    "documents": 2,
-    "meetings": 2,
-    "shopping": 2,
-    "entertainment": 3,
-    "relationships": 2,
+    "travel": 1,       # Only if destination is truly absent
+    "career": 99,      # Always proceed — ExpertResponder handles any career goal
+    "coding": 99,      # Always proceed — ExpertResponder will recommend a stack
+    "business": 99,    # Always proceed — ExpertResponder will use best assumptions
+    "learning": 99,    # Always proceed — ExpertResponder handles any learning goal
+    "finance": 99,     # Always proceed — ExpertResponder gives universal advice
+    "fitness": 99,     # Always proceed — ExpertResponder gives science-based plan
+    "reminder": 1,     # Need at least a subject
+    "research": 99,    # Always proceed
+    "writing": 99,     # Always proceed
+    "health": 99,
+    "productivity": 99,
+    "life_planning": 99,
+    "education": 99,
+    "documents": 99,
+    "meetings": 99,
+    "shopping": 99,
+    "entertainment": 99,
+    "relationships": 99,
     "task": 99,        # Always executes
 }
 
@@ -157,8 +162,23 @@ class InformationGatekeeper:
         if domain == "task":
             return GatekeeperDecision(needs_clarification=False)
 
+        # Special case: travel only asks if destination is truly absent
+        if domain == "travel":
+            if "destination" not in missing:
+                return GatekeeperDecision(needs_clarification=False)
+            # Only ask for destination — not budget or timeline
+            destination_q = _DOMAIN_QUESTIONS["travel"].get("destination", "")
+            if not destination_q:
+                return GatekeeperDecision(needs_clarification=False)
+            preamble = self._build_preamble(domain, intent.summary)
+            return GatekeeperDecision(
+                needs_clarification=True,
+                questions=[destination_q],
+                preamble=preamble,
+            )
+
         # Get the threshold for this domain
-        threshold = _MAX_MISSING_BEFORE_ASKING.get(domain, 1)
+        threshold = _MAX_MISSING_BEFORE_ASKING.get(domain, 99)
 
         if len(missing) < threshold:
             return GatekeeperDecision(needs_clarification=False)
